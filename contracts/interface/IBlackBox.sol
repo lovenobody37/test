@@ -2,59 +2,111 @@
 pragma solidity ^0.8.0;
 
 interface IBlackBox {
-    //Deposit token to buy lootbox
-    function depositToken(uint256 _amount) external;
+    enum STATUS {
+        OPEN,
+        CLOSED
+    }
+    struct RoundDetail {
+        uint256 roundId;
+        uint256 deadline;
+        uint256 result;
+        STATUS roundStatus;
+    }
+    struct Position {
+        address player;
+        uint256 roundId;
+        uint256 side;
+        uint256 amount;
+    }
 
-    //Buy lootbox
-    function buyLootBox(
-        uint256 _number,
-        uint256 _entranceFee,
-        uint256 _matchId,
+    function addRound(uint256 _roundId, uint256 _deadline) external;
+
+    //Buy BlackBox // USDC has 6 decimals
+    function buyBlackBox(
+        uint256 _amount,
+        uint256 _roundIndex,
         uint256 _side
     ) external;
 
-    function buyLootBoxes(
-        uint256[] calldata _numbers,
-        uint256[] calldata _entranceFees,
-        uint256[] calldata _matchIds,
-        uint256[] calldata _sides
-    ) external;
+    function setFeeToken(address _feeTokenAddress) external;
 
-    function withdrawFeeToken(uint256 _amount) external;
+    function setFeePercentage(uint256 _feePercentage) external;
 
-    function withdrawPlatformToken(uint256 _amount) external;
+    function setResult(uint256 _roundId, uint256 _result) external;
+
+    function manualUpdateRewardByRoundId(uint256 _roundId) external;
+
+    function setPlatformTokenRewardsPerRound(uint256 _rate) external;
+
+    function withdrawAllRewards() external;
+
+    function withdrawGas() external;
+
+    function depositGas() external payable;
 
     // Get functions
 
-    function getPositionsByMatchId(uint256 _matchId)
+    function getPositionIndexesByRoundId(uint256 _roundId)
         external
         view
         returns (uint256[] memory);
 
-    function getLeftPositionsByMatchId(uint256 _matchId)
+    function getLeftPositionIndexesByRoundId(uint256 _roundId)
         external
         view
         returns (uint256[] memory);
 
-    function getRightPositionsByMatchId(uint256 _matchId)
+    function getRightPositionIndexesByRoundId(uint256 _roundId)
         external
         view
         returns (uint256[] memory);
 
-    function getTotalAmountByMatchId(uint256 _matchId)
+    function getTotalAmountByRoundId(uint256 _roundId)
         external
         view
         returns (uint256);
 
-    function getLeftAmountByMatchId(uint256 _matchId)
+    function getLeftAmountByRoundId(uint256 _roundId)
         external
         view
         returns (uint256);
 
-    function getRightAmountByMatchId(uint256 _matchId)
+    function getRightAmountByRoundId(uint256 _roundId)
         external
         view
         returns (uint256);
+
+    // get notupdatedmatch // return lastUpdateRoundIndex, bool on isThereNotUpdate
+    function getNotUpdatedRewardsRoundIndexes()
+        external
+        view
+        returns (uint256[] memory);
+
+    function getActiveRoundIndex()
+        external
+        view
+        returns (uint256[] memory roundIndex);
+
+    function getActiveRoundId()
+        external
+        view
+        returns (uint256[] memory roundIndex);
+
+    function getRoundDetailsByRoundIndex(uint256 _index)
+        external
+        view
+        returns (RoundDetail memory);
+
+    function getPositionsByPositionIndex(uint256 _index)
+        external
+        view
+        returns (Position memory);
+
+    function getFeePercentage() external view returns (uint256);
+
+    function getPlatformTokenRewardsPerRound() external view returns (uint256);
+
+    function getFirstActiveRoundIndex() external view returns (uint256);
 
     function getAccuFee() external view returns (uint256);
 }

@@ -34,7 +34,8 @@ module.exports = {
         process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
     localhost: {
-      url: "http://127.0.0.1:8545" //Do forking here 
+      url: "http://127.0.0.1:8545", //Do forking here 
+      chainId: 31337
     }
   },
   gasReporter: {

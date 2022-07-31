@@ -3,9 +3,15 @@ pragma solidity ^0.8.0;
 
 interface IBlackBoxInfo {
     struct UserInfo {
+        uint256[] positionIndexesBought;
         uint256 feeTokenRewards;
         uint256 platformTokenRewards;
     }
+
+    function addPositionIndexBought(
+        address _userAddress,
+        uint256 _positionIndex
+    ) external;
 
     function setBlackBoxAddress(address _blackBoxAddress) external;
 

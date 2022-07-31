@@ -29,6 +29,8 @@ contract FeeSharingSystem is ReentrancyGuard, Ownable {
     IERC20 public immutable platformToken;
     IBlackBox public blackBox;
 
+    uint256 public accuStakingFee;
+
     uint256 public stakingFeePercentage;
 
     uint256 public lastUpdateAccuFee;
@@ -44,13 +46,8 @@ contract FeeSharingSystem is ReentrancyGuard, Ownable {
 
     mapping(address => UserInfo) public userInfo;
 
-    event Deposit(address indexed user, uint256 amount);
+    event Deposit(address indexed user, uint256 amount, uint256 stakingFee);
     event Harvest(address indexed user, uint256 harvestedAmount);
-    event NewRewardPeriod(
-        uint256 numberBlocks,
-        uint256 rewardPerBlock,
-        uint256 reward
-    );
     event Withdraw(
         address indexed userAddress,
         uint256 amount,
@@ -78,14 +75,17 @@ contract FeeSharingSystem is ReentrancyGuard, Ownable {
     }
 
     function deposit(uint256 _amount) external nonReentrant {
-        require(_amount >= 1, "Amount must be >= 1 platformToken");
+        require(
+            _amount >= PRECISION_FACTOR_BLACK,
+            "Amount must be >= 1 platformToken"
+        );
 
         // Update reward for user
         _updateReward(msg.sender);
 
-        uint256 stakingFee = ((_amount * PRECISION_FACTOR_BLACK) *
-            stakingFeePercentage) / (100 * PRECISION_FACTOR_FEE_PERCENTAGE);
-        uint256 stakingAmount = (_amount * PRECISION_FACTOR_BLACK) - stakingFee;
+        uint256 stakingFee = (_amount * stakingFeePercentage) /
+            (100 * PRECISION_FACTOR_FEE_PERCENTAGE);
+        uint256 stakingAmount = _amount - stakingFee;
 
         // Approve platformToken before deposit
 
@@ -101,12 +101,12 @@ contract FeeSharingSystem is ReentrancyGuard, Ownable {
             address(blackBox),
             stakingFee
         );
-
+        accuStakingFee += stakingFee;
         // Adjust internal shares
         userInfo[msg.sender].shares += stakingAmount;
         totalShares += stakingAmount;
 
-        emit Deposit(msg.sender, stakingAmount);
+        emit Deposit(msg.sender, stakingAmount, stakingFee);
     }
 
     /**
@@ -230,10 +230,6 @@ contract FeeSharingSystem is ReentrancyGuard, Ownable {
         return userInfo[_address];
     }
 
-    function getPendingRewards(address user) external view returns (uint256) {
-        return _calculatePendingRewards(user);
-    }
-
     /**
      * @notice Return last block where trading rewards were distributed
      */
@@ -246,5 +242,32 @@ contract FeeSharingSystem is ReentrancyGuard, Ownable {
      */
     function _lastRewardBlock() internal view returns (uint256) {
         return block.number;
+    }
+
+    function getPendingRewards(address user) external view returns (uint256) {
+        uint256 rewardPerToken = getRewardPerToken();
+        return
+            ((userInfo[user].shares *
+                (rewardPerToken - (userInfo[user].userRewardPerTokenPaid))) /
+                PRECISION_FACTOR_BLACK) + userInfo[user].rewards;
+    }
+
+    function getRewardPerToken() public view returns (uint256) {
+        if (totalShares == 0) {
+            return rewardPerTokenStored;
+        }
+        uint256 newAccuFee = blackBox.getAccuFee();
+        uint256 rewardPerToken = rewardPerTokenStored +
+            (((newAccuFee - lastUpdateAccuFee)) * PRECISION_FACTOR_BLACK) /
+            totalShares;
+        return rewardPerToken;
+    }
+
+    function getTotalShares() public view returns (uint256) {
+        return totalShares;
+    }
+
+    function getStakingFeePercentage() public view returns (uint256) {
+        return stakingFeePercentage;
     }
 }
